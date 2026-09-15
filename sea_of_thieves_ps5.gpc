@@ -6,16 +6,16 @@
 
    الميزات المحدثة:
    1. Auto Cannon Fire - إطلاق مدافع تلقائي على R2
-   2. Equip Cannon - عبي الكنون من Triangle (عادي)
-   3. Anti-Recoil - تقليل الارتداد المتقدم
-   4. Aim Assist - تصويب احترافي
-   5. Mode Toggle - 3 أوضاع متقدمة
+   2. Auto Jump - قفز تلقائي مستمر
+   3. Auto Sprint - ركض تلقائي مستمر
+   4. Anti-Recoil - تقليل الارتداد المتقدم
+   5. Aim Assist - تصويب احترافي
    ------------------------------------------------------------------ */
 
 // ========== تعيين أزرار PS5 Pro Controller ==========
 define FIRE_BTN       = PS5_R2;      // إطلاق المدفع (تلقائي)
 define ADS_BTN        = PS5_L2;      // التصويب
-define JUMP_BTN       = PS5_CROSS;   // القفز
+define JUMP_BTN       = PS5_CROSS;   // القفز (تلقائي)
 define CANNON_BTN     = PS5_TRIANGLE; // عبي الكنون
 define RELOAD_BTN     = PS5_SQUARE;  // إعادة تحميل
 define MELEE_BTN      = PS5_CIRCLE;  // الهجوم القريب
@@ -23,28 +23,35 @@ define LY_AXIS        = PS5_LY;      // محور الحركة الأمام/ال�
 define LX_AXIS        = PS5_LX;      // محور الحركة يسار/يمين
 define RX_AXIS        = PS5_RX;      // محور الكاميرا الأفقي
 define RY_AXIS        = PS5_RY;      // محور الكاميرا العمودي
-define MODE_TOGGLE    = PS5_SHARE;   // تبديل الأوضاع
-define L3_BTN         = PS5_L3;      // الركض
+define L3_BTN         = PS5_L3;      // الركض التلقائي
 
 // ========== متغيرات التحكم (مضبوطة للأداء العالي) ==========
 int auto_cannon_enabled    = TRUE;
+int auto_jump_enabled      = TRUE;
+int auto_sprint_enabled    = TRUE;
 int anti_recoil_enabled    = TRUE;
 int aim_assist_enabled     = TRUE;
 
-int current_mode           = 2; // 2=Aggressive (الوضع العدواني الافتراضي)
-int cannon_speed           = 30; // سرعة إطلاق المدفع (سريع جداً)
-int recoil_reduction       = 10; // تقليل الارتداد (دقيق)
+int cannon_speed           = 25;  // سرعة إطلاق المدفع (سريع جداً)
+int jump_interval          = 400; // فترة القفز التلقائي
+int sprint_intensity       = 100; // كثافة الركض التلقائي
+int recoil_reduction       = 10;  // تقليل الارتداد (دقيق)
 
 // ========== MAIN LOOP ==========
 main {
-    // تبديل الأوضاع
-    if (get_val(MODE_TOGGLE)) {
-        combo_run(ToggleMode);
-    }
-
-    // إطلاق المدفع التلقائي - سريع جداً
+    // إطلاق المدفع التلقائي - سريع جداً على R2
     if (auto_cannon_enabled && get_val(FIRE_BTN)) {
         combo_run(AutoCannonFire);
+    }
+
+    // قفز تلقائي مستمر
+    if (auto_jump_enabled) {
+        combo_run(AutoJump);
+    }
+
+    // ركض تلقائي مستمر - طالما اللاعب يتحرك
+    if (auto_sprint_enabled && (abs(get_val(LY_AXIS)) > 30 || abs(get_val(LX_AXIS)) > 30)) {
+        combo_run(AutoSprint);
     }
 
     // تقليل الارتداد - احترافي
@@ -60,28 +67,7 @@ main {
 
 // ========== COMBOS (مخصص للأداء العالي) ==========
 
-// 1. تبديل الأوضاع
-combo ToggleMode {
-    current_mode++;
-    if (current_mode > 3) {
-        current_mode = 1;
-    }
-
-    if (current_mode == 1) {
-        // وضع Normal - متوازن
-        cannon_speed = 40;
-    } else if (current_mode == 2) {
-        // وضع Aggressive - عدواني سريع جداً (الأفضل)
-        cannon_speed = 25;
-    } else if (current_mode == 3) {
-        // وضع Rapid Fire - إطلاق فائق السرعة
-        cannon_speed = 15;
-    }
-
-    wait(150);
-}
-
-// 2. إطلاق المدفع التلقائي - محسّن للأداء العالي
+// 1. إطلاق المدفع التلقائي - محسّن للأداء العالي
 combo AutoCannonFire {
     set_val(FIRE_BTN, 100);
     wait(cannon_speed);
@@ -89,14 +75,30 @@ combo AutoCannonFire {
     wait(15);
 }
 
-// 3. تقليل الارتداد - دقيق جداً
+// 2. قفز تلقائي مستمر
+combo AutoJump {
+    set_val(JUMP_BTN, 100);
+    wait(80);
+    set_val(JUMP_BTN, 0);
+    wait(jump_interval);
+}
+
+// 3. ركض تلقائي مستمر
+combo AutoSprint {
+    set_val(L3_BTN, sprint_intensity);
+    wait(100);
+    set_val(L3_BTN, 0);
+    wait(80);
+}
+
+// 4. تقليل الارتداد - دقيق جداً
 combo AntiRecoil {
     set_val(RY_AXIS, recoil_reduction);
     wait(60);
     set_val(RY_AXIS, 0);
 }
 
-// 4. مساعدة التصويب - تصويب احترافي
+// 5. مساعدة التصويب - تصويب احترافي
 combo AimAssist {
     if (get_val(RX_AXIS) > -15 && get_val(RX_AXIS) < 15) {
         set_val(RX_AXIS, get_val(RX_AXIS) * 0.60);
@@ -105,13 +107,12 @@ combo AimAssist {
 }
 
 /* ------------------------------------------------------------------
-   تحديثات:
-   ✅ حذف Fast Bucket (المغرفة السريعة)
-   ✅ حذف Fast Sword (السيف السريع)
-   ✅ حذف Bunny Hop (القفز)
-   ✅ حذف Auto Sprint (الركض التلقائي)
+   تحديثات نهائية:
+   ✅ حذف Fast Bucket (المغرفة السريعة) فقط
+   ✅ بقي Auto Jump (القفز التلقائي)
+   ✅ بقي Auto Sprint (الركض التلقائي)
    ✅ إضافة Auto Cannon Fire على R2 (إطلاق تلقائي سريع جداً)
    ✅ Triangle = عبي الكنون (عادي بدون تلقائي)
-   ✅ 3 أوضاع للإطلاق (Normal - Aggressive - Rapid Fire)
    ✅ Anti-Recoil و Aim Assist محفوظة
+   ✅ الكود محسّن للأداء العالي والاستقرار
    ------------------------------------------------------------------ */
